@@ -19,7 +19,8 @@ echo 'Creating a public IP for the load balancer'
 az network public-ip create \
     --resource-group $RgName \
     --allocation-method Static \
-    --name loadbalancerPublicIP 
+    --name loadbalancerPublicIP \
+    --location $Location
 
 # Create the load balancer
 echo '------------------------------------------'
@@ -40,7 +41,8 @@ az network lb probe create \
     --lb-name loadbalancer \
     --name loadbalancerProbe \
     --protocol tcp \
-    --port 80
+    --port 80 \
+    --location $Location
 
 # Create a rule for the load balancer
 echo '------------------------------------------'
