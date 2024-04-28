@@ -89,7 +89,8 @@ for i in `seq 1 3`; do
     --subnet loadbalancerSubnet \
     --network-security-group loadbalancerNetworkSecurityGroup \
     --lb-name loadbalancer \
-    --lb-address-pools loadbalancerBackEndPool 
+    --lb-address-pools loadbalancerBackEndPool \
+    --location $Location
 done 
 
 # Create 3 VM's
