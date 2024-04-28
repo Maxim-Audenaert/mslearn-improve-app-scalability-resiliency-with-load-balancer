@@ -75,10 +75,8 @@ az network nsg rule create \
     --source-port-ranges '*' \
     --destination-address-prefixes '*' \
     --destination-port-ranges 80 \
-    --frontend-ip-name loadbalancerFrontEndPool \
-    --backend-pool-name loadbalancerBackEndPool \
     --access allow \
-    --probe-name loadbalancerProbe 
+    --priority 200
 
 # Create the NIC
 for i in `seq 1 2 3`; do
