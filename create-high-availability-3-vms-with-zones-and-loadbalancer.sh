@@ -42,7 +42,6 @@ az network lb probe create \
     --name loadbalancerProbe \
     --protocol tcp \
     --port 80 \
-    --location $Location
 
 # Create a rule for the load balancer
 echo '------------------------------------------'
