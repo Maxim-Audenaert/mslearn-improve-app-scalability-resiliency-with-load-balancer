@@ -79,7 +79,7 @@ az network nsg rule create \
     --priority 200
 
 # Create the NIC
-for i in `seq 1 2 3`; do
+for i in `seq 1 3`; do
   echo '------------------------------------------'
   echo 'Creating NIC'$i
   az network nic create \
@@ -93,7 +93,7 @@ for i in `seq 1 2 3`; do
 done 
 
 # Create 3 VM's
-for i in `seq 1 2 3`; do
+for i in `seq 1 3`; do
   echo '------------------------------------------'
   echo 'Creating VM'$i
   az vm create \
@@ -104,6 +104,7 @@ for i in `seq 1 2 3`; do
     --name VM$i \
     --nics NIC$i \
     --image Ubuntu2204 \
+    --location $Location \
     --zone $i \
     --generate-ssh-keys \
     --custom-data webpage.txt
