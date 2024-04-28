@@ -29,7 +29,8 @@ az network lb create \
     --name loadbalancer \
     --public-ip-address loadbalancerPublicIP \
     --frontend-ip-name loadbalancerFrontEndPool  \
-    --backend-pool-name loadbalancerBackEndPool  
+    --backend-pool-name loadbalancerBackEndPool \
+    --location $Location
 
 # Create a probe for the load balancer
 echo '------------------------------------------'
@@ -61,6 +62,7 @@ echo 'Creating a Network Security Group'
 az network nsg create \
     --resource-group $RgName \
     --name loadbalancerNetworkSecurityGroup \
+    --location $Location
 
 # Create a HTTP rule
 echo '------------------------------------------'
