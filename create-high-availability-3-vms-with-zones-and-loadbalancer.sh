@@ -1,7 +1,7 @@
 #!/bin/bash
 
 RgName=`az group list --query '[].name' --output tsv`
-Location=`az group list --query '[].location' --output tsv`
+Location=`westeurope`
 
 date
 # Create a Virtual Network for the VMs
@@ -10,34 +10,34 @@ echo 'Creating a Virtual Network for the VMs'
 az network vnet create \
     --resource-group $RgName \
     --location $Location \
-    --name portalBEVnet \
-    --subnet-name portalBESubnet 
+    --name loadbalancerVnet \
+    --subnet-name loadbalancerSubnet 
 
 # Create a public IP for the load balancer
 echo '------------------------------------------'
 echo 'Creating a public IP for the load balancer'
-az network public-ip create --resource-group $RgName \
-   --name azPatientPortalPublicIP --sku Standard
+az network public-ip create \
+    --resource-group $RgName \
+    --allocation-method Static \
+    --name loadbalancerPublicIP 
 
 # Create the load balancer
 echo '------------------------------------------'
-echo 'Creating the internal load balancer'
+echo 'Creating the load balancer'
 az network lb create \
     --resource-group $RgName \
-    --name azPatientBELoadBalancer \
-    --sku standard \
-    --public-ip-address azPatientPortalPublicIP \
-    --private-ip-address 10.0.0.9 \
-    --frontend-ip-name azFrontEndPool  \
-    --backend-pool-name azBackEndPool  
+    --name loadbalancer \
+    --public-ip-address loadbalancerPublicIP \
+    --frontend-ip-name loadbalancerFrontEndPool  \
+    --backend-pool-name loadbalancerBackEndPool  
 
 # Create a probe for the load balancer
 echo '------------------------------------------'
 echo 'Creating a probe for the load balancer'
 az network lb probe create \
     --resource-group $RgName \
-    --lb-name azPatientBELoadBalancer \
-    --name azBEHealthProbe \
+    --lb-name loadbalancer \
+    --name loadbalancerProbe \
     --protocol tcp \
     --port 80
 
@@ -46,91 +46,77 @@ echo '------------------------------------------'
 echo 'Creating a rule for the load balancer'
 az network lb rule create \
     --resource-group $RgName \
-    --lb-name azPatientBELoadBalancer \
-    --name azPatientHTTPRule \
+    --lb-name loadbalancer \
+    --name loadbalancerHTTPRule \
     --protocol tcp \
     --frontend-port 80 \
     --backend-port 80 \
-    --frontend-ip-name azFrontEndPool \
-    --backend-pool-name azBackEndPool \
-    --probe-name azBEHealthProbe 
+    --frontend-ip-name loadbalancerFrontEndPool \
+    --backend-pool-name loadbalancerBackEndPool \
+    --probe-name loadbalancerProbe 
 
 # Create a Network Security Group
 echo '------------------------------------------'
 echo 'Creating a Network Security Group'
 az network nsg create \
     --resource-group $RgName \
-    --name portalNetworkSecurityGroup \
-
-# Create a network security group rule for port 22.
-echo '------------------------------------------'
-echo 'Creating a SSH rule'
-az network nsg rule create \
-    --resource-group $RgName \
-    --nsg-name portalNetworkSecurityGroup \
-    --name portalNetworkSecurityGroupRuleSSH \
-    --protocol tcp \
-    --direction inbound \
-    --source-address-prefix '*' \
-    --source-port-range '*'  \
-    --destination-address-prefix '*' \
-    --destination-port-range 22 \
-    --access allow \
-    --priority 1000
+    --name loadbalancerNetworkSecurityGroup \
 
 # Create a HTTP rule
 echo '------------------------------------------'
 echo 'Creating a HTTP rule'
 az network nsg rule create \
     --resource-group $RgName \
-    --nsg-name portalNetworkSecurityGroup \
-    --name portalNetworkSecurityGroupRuleHTTP \
+    --nsg-name loadbalancerNetworkSecurityGroup \
+    --name loadbalancerNetworkSecurityGroupRuleHTTP \
     --protocol tcp \
     --direction inbound \
-    --source-address-prefix '*' \
-    --source-port-range '*' \
-    --destination-address-prefix '*' \
-    --destination-port-range 80 \
+    --source-address-prefixes '*' \
+    --source-port-ranges '*' \
+    --destination-address-prefixes '*' \
+    --destination-port-ranges 80 \
+    --frontend-ip-name loadbalancerFrontEndPool \
+    --backend-pool-name loadbalancerBackEndPool \
     --access allow \
-    --priority 200
+    --probe-name loadbalancerProbe 
 
 # Create the NIC
-for i in `seq 1 2`; do
+for i in `seq 1 2 3`; do
   echo '------------------------------------------'
-  echo 'Creating dbNic'$i
+  echo 'Creating NIC'$i
   az network nic create \
     --resource-group $RgName \
-    --name dbNic$i \
-    --vnet-name portalBEVnet \
-    --subnet portalBESubnet \
-    --network-security-group portalNetworkSecurityGroup \
-    --lb-name azPatientBELoadBalancer \
-    --lb-address-pools azBackEndPool 
+    --name NIC$i \
+    --vnet-name loadbalancerVnet \
+    --subnet loadbalancerSubnet \
+    --network-security-group loadbalancerNetworkSecurityGroup \
+    --lb-name loadbalancer \
+    --lb-address-pools loadbalancerBackEndPool 
 done 
 
-# Create 2 VM's from a template
-for i in `seq 1 2`; do
+# Create 3 VM's
+for i in `seq 1 2 3`; do
   echo '------------------------------------------'
-  echo 'Creating webVM'$i
+  echo 'Creating VM'$i
   az vm create \
     --admin-username azureuser \
     --admin-password Pa55w.rd1234! \
     --authentication-type all \
     --resource-group $RgName \
-    --name dbVM$i \
-    --nics dbNic$i \
+    --name VM$i \
+    --nics NIC$i \
     --image Ubuntu2204 \
     --zone $i \
     --generate-ssh-keys \
-    --custom-data backend-init.txt
+    --custom-data webpage.txt
 done
 
 # Done
 echo '---------------------------------------------------'
 echo '             Setup Script Completed'
 echo '---------------------------------------------------'
-strCommand="az network public-ip show -n azPatientPortalPublicIP --query ipAddress -o tsv -g "$RgName
+strCommand="az network public-ip show -n loadbalancerPublicIP --query ipAddress -o tsv -g "$RgName
 publicIP=`${strCommand}`
-echo ' Visit the Patient Portal at: http://'$publicIP
+echo ' Visit the webpage at: http://'$publicIP
 echo '---------------------------------------------------'
 date
